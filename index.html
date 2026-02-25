@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Digital | CravinFoods</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d32f2f;
+            --dark: #212121;
+            --light: #f5f5f5;
+            --gold: #fbc02d;
+            --white: #ffffff;
+            --whatsapp: #25d366;
+        }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--light); margin: 0; padding-bottom: 100px; }
+
+        header { background-color: var(--dark); color: var(--white); padding: 20px; text-align: center; border-bottom: 5px solid var(--primary); }
+        
+        .category-nav { display: flex; overflow-x: auto; background: var(--white); padding: 15px; gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .category-nav button { background: white; border: 2px solid var(--primary); padding: 8px 15px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-weight: 600; color: var(--primary); }
+        .category-nav button.active { background: var(--primary); color: white; }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        
+        .product-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .product-img { width: 100%; height: 180px; object-fit: cover; }
+        .product-info { padding: 15px; flex-grow: 1; }
+        .product-info h3 { font-size: 0.9rem; margin: 0 0 10px; height: 2.5em; text-transform: uppercase; }
+        
+        .price-tag { color: var(--primary); font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; display: block; }
+        
+        .controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        input[type="number"] { width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; text-align: center; }
+        
+        .btn-add { background: var(--dark); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; flex-grow: 1; font-weight: 600; font-size: 0.8rem; }
+        .btn-add:hover { background: var(--primary); }
+
+        /* Carrinho Flutuante */
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--dark); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
+        .btn-finalize { background: var(--whatsapp); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 style="margin:0">CRAVINFOODS</h1>
+    <p style="margin:5px 0 0">Tabela de Preços: 24/02/2026</p>
+</header>
+
+<div class="category-nav" id="categoryNav"></div>
+
+<div class="container">
+    <div class="product-grid" id="productGrid"></div>
+</div>
+
+<div class="cart-bar" id="cartBar" style="display:none">
+    <div><span id="cartCount">0</span> itens selecionados</div>
+    <button class="btn-finalize" onclick="enviarPedido()">Finalizar Pedido via WhatsApp</button>
+</div>
+
+<script>
+    const CONFIG = {
+        whatsapp: "5516994154400",
+        empresa: "CRAVINFOODS LTDA"
+    };
+
+    let carrinho = [];
+
+    const dadosProdutos = [
+        [span_1](start_span){ id: 1, cat: "AVES", nome: "Coxa e Sobrecoxa Fgo Cong 20 KG", preco: 9.90, emb: "KG (PD 20)", img: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=400" }, //[span_1](end_span)
+        [span_2](start_span){ id: 2, cat: "AVES", nome: "Coxinha da Asa Congelada 20 KG", preco: 12.90, emb: "KG (PD 20)", img: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400" }, //[span_2](end_span)
+        [span_3](start_span){ id: 3, cat: "AVES", nome: "File de Peito 20kg", preco: 17.40, emb: "KG (PD 20)", img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400" }, //[span_3](end_span)
+        [span_4](start_span){ id: 4, cat: "BOVINOS", nome: "Picanha A Cong", preco: 69.00, emb: "KG (10 a 13)", img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400" }, //[span_4](end_span)
+        [span_5](start_span){ id: 5, cat: "BOVINOS", nome: "Cupim Temperado ao Alho", preco: 34.00, emb: "KG (10 a 12)", img: "https://images.unsplash.com/photo-1593030103066-01bb303753b1?w=400" }, //[span_5](end_span)
+        [span_6](start_span){ id: 6, cat: "SUINOS", nome: "Linguica de Carne Suina Cong", preco: 12.90, emb: "KG (PD 10)", img: "https://images.unsplash.com/photo-1544073427-3ef60706225b?w=400" }, //[span_6](end_span)
+        [span_7](start_span){ id: 7, cat: "SUINOS", nome: "Lombo Suino Cong", preco: 18.90, emb: "KG (18 a 32)", img: "https://images.unsplash.com/photo-1602491950780-1c5014bfa197?w=400" }, //[span_7](end_span)
+        [span_8](start_span){ id: 8, cat: "VEGETAIS", nome: "Batata Bem Brasil 14kg", preco: 12.99, emb: "KG (PD 14)", img: "https://images.unsplash.com/photo-1518013031637-274436226ec2?w=400" }, //[span_8](end_span)
+        [span_9](start_span){ id: 9, cat: "VEGETAIS", nome: "Brocolis Pct 2kg-10kg", preco: 12.60, emb: "KG (PD 10)", img: "https://images.unsplash.com/photo-1453227588063-bb302b62f50b?w=400" }  //[span_9](end_span)
+    ];
+
+    function renderizar(categoria) {
+        const grid = document.getElementById('productGrid');
+        grid.innerHTML = '';
+        const filtrados = categoria === 'TODOS' ? dadosProdutos : dadosProdutos.filter(p => p.cat === categoria);
+
+        filtrados.forEach(p => {
+            grid.innerHTML += `
+                <div class="product-card">
+                    <img src="${p.img}" class="product-img">
+                    <div class="product-info">
+                        <h3>${p.nome}</h3>
+                        <span style="font-size:0.7rem; color:#666">${p.emb}</span>
+                        <span class="price-tag">R$ ${p.preco.toFixed(2).replace('.',',')}</span>
+                        <div class="controls">
+                            <input type="number" id="qty-${p.id}" value="1" min="1">
+                            <button class="btn-add" onclick="adicionar(${p.id})">ADICIONAR</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function adicionar(id) {
+        const produto = dadosProdutos.find(p => p.id === id);
+        const qtd = parseInt(document.getElementById(qty-${id}).value);
+        
+        const index = carrinho.findIndex(item => item.id === id);
+        if (index > -1) {
+            carrinho[index].qtd += qtd;
+        } else {
+            carrinho.push({ ...produto, qtd });
+        }
+        
+        atualizarCarrinho();
+    }
+
+    function atualizarCarrinho() {
+        const totalItens = carrinho.reduce((sum, item) => sum + item.qtd, 0);
+        document.getElementById('cartCount').innerText = totalItens;
+        document.getElementById('cartBar').style.display = totalItens > 0 ? 'flex' : 'none';
+    }
+
+    function enviarPedido() {
+        let texto = *NOVO PEDIDO - ${CONFIG.empresa}*\n\n;
+        carrinho.forEach(item => {
+            texto += • ${item.qtd}x ${item.nome} (R$ ${item.preco.toFixed(2)})\n;
+        });
+        
+        const url = https://api.whatsapp.com/send?phone=${CONFIG.whatsapp}&text=${encodeURIComponent(texto)};
+        window.open(url, '_blank');
+    }
+
+    // Navegação
+    const categorias = ['TODOS', ...new Set(dadosProdutos.map(p => p.cat))];
+    const nav = document.getElementById('categoryNav');
+    categorias.forEach((cat, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = cat;
+        if(i === 0) btn.classList.add('active');
+        btn.onclick = (e) => {
+            document.querySelectorAll('.category-nav button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            renderizar(cat);
+        };
+        nav.appendChild(btn);
+    });
+
+    renderizar('TODOS');
+</script>
+</body>
+</html>
